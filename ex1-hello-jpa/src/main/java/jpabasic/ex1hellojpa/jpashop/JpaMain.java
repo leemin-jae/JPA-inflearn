@@ -1,4 +1,4 @@
-package jpabasic.ex1hellojpa.hellojpa;
+package jpabasic.ex1hellojpa.jpashop;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -17,24 +17,7 @@ public class JpaMain {
         EntityTransaction tx = em.getTransaction();
         tx.begin();
         try {
-//            //데이터 삽입
-//            Member member = new Member();
-//            member.setId(2L);
-//            member.setName("HelloB");
-//            em.persist(member);
-//
-//
-//
-//            Member findMember = em.find(Member.class , 2L);
-//            System.out.println(findMember.getName());
-//            findMember.setName("HelloJPA");
-//
-//            List<Member> result = em.createQuery("select m from Member as m" , Member.class).getResultList();
-//
-//            for (Member m : result){
-//                System.out.println("member.name = " + m.getName());
-//            }
-
+            //데이터 삽입
             tx.commit();
         }catch (Exception e){
             tx.rollback();
