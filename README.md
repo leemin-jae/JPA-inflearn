@@ -94,7 +94,7 @@ SQL - 데이터베이스 테이블을 대상으로 쿼리.
   * 준영속 : 저장되었다 `분리`된 상태
   * 삭제 : `삭제`된 상태
 
-![alt text](JPA_3_2.png)
+![alt text](image/JPA_3_2.png)
 
 
 ```java
@@ -146,3 +146,173 @@ em.remove(member);
     * 수정된 엔티티 쓰기 지연 SQL 저장소 등록
 
     * 쓰기 지연 SQL 저장소의 쿼리를 데이터베이스에 전송 (등록, 수정, 삭제)
+
+---------------------
+
+# 4. 엔티티 매핑
+
+### 객체와 테이블
+
+* @Entity가 붙은 클래스는 JPA가 관리
+
+* JPA를 사용할 테이블과 매핑 클래스는 @Entity는 필수
+
+* 주의 
+  *  기본 생성자 필수 (파라미터 없는 public 또는 protected 생성자)
+  
+  * final 클래스 , enum, interface, inner 클래스 사용 불가
+  * 저장할 필드 final 사용 불가
+
+
+#### 데이터베이스 스키마 자동 생성
+
+* DDL을 애플리케이션 실행 시점에 자동 생성
+* 데이터베이스 방언을 활용 적절한 DDL 생성
+* 속성
+  * create : 삭제 후 다시 생성
+  * create-drop : 종료시점에 drop
+  * update : 변경분만 반영(운영엔 사용 X)
+
+  > 운영 장비는 절대 create, create-drop, update 사용 하면 안됨
+  
+  * validate : 엔티티와 테이블이 정상 매핑되었는지만 확인
+  * none : 사용하지 않음
+
+  ---------------------
+
+# 5. 연관관계 매핑 기초
+
+* 방향 : 단방햫, 양방향
+* 다중성: 다대일, 일대다, 일대일, 다대다
+* **연관관계의 주인**
+
+> 객체지향 설게의 목표는 자율적인 객체들의 협력 공동체를 만드는 것이다.
+
+* 객체를 테이블에 맞춰 생성 했을 경우(외래키 식별자를 직접 다룬다.) ->  협력관계를 만들수가 없다.
+  
+  * 테이블은 외래 키로 조인을 사용해서 테이블을 찾는다
+  * 객체는 참조를 사용해서 연관된 객체를 찾는다.
+  * 테이블과 객체 사이에 간격이 생김
+
+### 양방향 연관관계와 연관관계의 주인
+
+* 팀과 멤버
+
+  ```java
+  @Entity
+  public class Team {
+    @Id
+    @GeneratedValue
+    @Column(name = "TEAM_ID")
+    private Long id;
+
+    private String name;
+
+    @OneToMany(mapperdBy = "team")
+    private List<Member> members = new ArrayList<>();
+  }
+
+  ```
+
+  ```java
+  @Entity
+  public class Member {
+    @Id @GeneratedValue
+    @Column(name = "MEMBER_ID")
+    private Long id;
+
+    @Column(name = "USERNAME")
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "TEAM_ID")
+    private Team team;
+    }
+  ```
+
+
+#### 연관관계 주인(Owner)
+  
+객체 연관관계 = 2개, 테이블 연관관계 = 1개  - > 차이가 있음
+
+  * 객체의 양방향 관계는 사실 양방향이 아닌 서로 다른 관계 2개
+
+  * 두 객체 중 하나로 외래 키를 관리해야 한다.
+
+양방향 매핑 규칙
+
+  * 객체의 두 관계 중 하나를 연관관계의 주인으로 지정
+
+    * 외래 키가 있는 곳을 주인으로 정해라
+
+  * 연관관계의 주인만이 외래 키를 관리(등록, 수정) -> List에 add 한다고 추가 되지 않는다.(설정하면 가능하지만 그럴 필요가 없다.)
+
+  * 주인이 아닌 쪽은 읽기만 가능
+
+  * 주인은 mappedBy 속성 사용 x
+
+  * 주인이 아니면 mapperdBy 속성으로 주인 지정
+
+### 연관관계 매핑 주의점, 정리
+
+* 양방향 매핑시 가장 많이 하는 실수
+
+  연관관계의 주인에 값을 입력하지 않음.
+
+  ```java
+  Memeber member = new Member();
+
+  Team team = new Team();
+  team.getMembers().add(member);
+  ```
+
+  이경우 member의 team은 null이됨.
+
+  ```java
+  Team team = new Team();
+
+  Memeber member = new Member();
+  member.setTeam(team);
+  ```
+
+  순서가 맞게 들어간다.
+
+  * 하지만 양방향시 양쪽에 값을 설정하는 것이 순수 객체 상태를 고래해서 좋다.
+
+* 양방향 매핑시에 무한 루프를 조심
+
+  * ex) toString(), lombok, JSON생성 라이브러리 등
+
+#### 정리
+
+* **단방향 매핑만으로도 이미 연관관계 매핑은 완료**
+
+* 양방향 매핑은 반대 방향으로 조회(객체 그래프 탐색) 기능이 추가된 것 뿐
+
+* JPQL에서 역방향으로 탐색할 일이 많음
+
+* 단방향 매핑을 잘 하고 양방향은 필요할 때 추가해도 됨.
+
+  ---------------------
+
+# 6. 다양한 연관관계 매핑
+
+### 다대일[N:1]
+
+* 항상 다 쪽에 외래키가 들어간다.
+
+### 일대다[1:N]
+
+* 일이 연관관계의 주인일때
+
+* 객체와 테이블의 차이 때문에 반대편 테이블의 외래 키를 관리하는 특이한 구조
+
+* @JoinColumn을 꼭 사용해야 함. 그렇지 않을 경우 중간에 조인 테이블이 생성됨
+
+* 단점
+
+  * 엔티티가 관리하는 외래 키가 다른 테이블에 있음
+
+  * 연관관계 관리를 위해 추가로 UPDATE SQL 실행
+
+> 결론 : 일대다 단방향 매핑보다는 다대일 양방향 매핑을 사용하자
